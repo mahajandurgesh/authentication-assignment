@@ -1,16 +1,17 @@
 const express = require('express');
 const fs = require('fs');
 const app = express();
-var session = require('express-session')
+var session = require('express-session');
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
-app.set('trust proxy', 1)
+app.set('trust proxy', 1);
 app.use(session({
   secret: 'secret',
   resave: false,
   saveUninitialized: true
-}))
+}));
+
 
 app.get('/', function(req, res) {
     if(req.session.username) {
@@ -43,7 +44,11 @@ app.get('/signup', function(req, res) {
 });
 
 app.get('/getUsername', function(req, res) {
-    res.status(200).json({username: req.session.username});
+    if(req.session.username) {
+        res.status(200).json({username: req.session.username});
+    } else {
+        res.redirect('/login');
+    }
 });
 
 app.get('/css/style.css', function(req, res) {
@@ -51,17 +56,25 @@ app.get('/css/style.css', function(req, res) {
 });
 
 app.get('/todo.js', function(req, res) {
-    res.sendFile(__dirname + '/todoViews/js/todo.js');
+    if(req.session.username) {
+        res.sendFile(__dirname + '/todoViews/js/todo.js');
+    } else {
+        res.redirect('/login');
+    }
 });
 
 app.get('/getTodos', function(req, res) {
-    readTodosFromFile(function(err, todos) {
-        if(err) {
-            res.status(500).send('Error reading file');
-        } else {
-            res.status(200).send(todos);
-        }
-    });
+    if(req.session.username) {
+        readTodosFromFile(function(err, todos) {
+            if(err) {
+                res.status(500).send('Error reading file');
+            } else {
+                res.status(200).send(todos);
+            }
+        });
+    } else {
+        res.redirect('/login');
+    }
 });
 
 app.get('/invalidCredentials', function(req, res) {
@@ -136,6 +149,9 @@ app.post('/signup', function(req, res){
 });
 
 app.post('/todo', function(req, res) {
+    if(!req.session.username) {
+        return res.status(200).redirect('/login');
+    }
     let todoContent = req.body.todoContent;
     let todoCompleted = false;
     let todo = {todoContent, todoCompleted};
